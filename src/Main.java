@@ -7,6 +7,7 @@ import java.io.IOException;
 import java.util.ArrayList;
 import java.util.HashSet;
 import java.util.List;
+import java.util.Scanner;
 import java.util.Set;
 
 public class Main {
@@ -36,19 +37,20 @@ public class Main {
     }
 
     // Metodo principale di crawl statico
-    public static List<PageInfo> crawl(String url, int level) {
+    public static List<PageInfo> crawl(String url, int maxDepth) {
         Set<String> visitedUrls = new HashSet<>();
         List<PageInfo> pageInfos = new ArrayList<>();
-        crawlLevelOne(url, visitedUrls, pageInfos, level);
+        crawlRecursive(url, visitedUrls, pageInfos, 1, maxDepth);
         return pageInfos;
     }
 
-    // Metodo per il crawling di livello 1
-    private static void crawlLevelOne(String url, Set<String> visitedUrls, List<PageInfo> pageInfos, int level) {
-        if (level != 1 || visitedUrls.contains(url)) {
-            return;
+    // Metodo per il crawling ricorsivo
+    private static void crawlRecursive(String url, Set<String> visitedUrls, List<PageInfo> pageInfos, int currentDepth, int maxDepth) {
+        if (currentDepth > maxDepth || visitedUrls.contains(url)) {
+            return; // Interrompe se supera la profondità o l'URL è già stato visitato
         }
-        visitedUrls.add(url);
+
+        visitedUrls.add(url); // Aggiunge l'URL al set dei visitati
 
         try {
             Document doc = getDocument(url);
@@ -56,17 +58,14 @@ public class Main {
                 // Aggiunge l'informazione della pagina alla lista e la stampa
                 PageInfo pageInfo = new PageInfo(doc.title(), url);
                 pageInfos.add(pageInfo);
-                System.out.println(pageInfo);
+                System.out.println("Profondità " + currentDepth + ": " + pageInfo);
 
-                // Estrazione e stampa dei link di livello 1
+                // Estrazione e ricorsione sui link
                 Elements links = doc.select("a[href]");
                 for (Element link : links) {
                     String linkHref = link.absUrl("href");
                     if (!visitedUrls.contains(linkHref) && isHttpOrHttps(linkHref)) {
-                        visitedUrls.add(linkHref);
-                        PageInfo linkedPageInfo = new PageInfo(getPageTitle(linkHref), linkHref);
-                        pageInfos.add(linkedPageInfo);
-                        System.out.println(linkedPageInfo);
+                        crawlRecursive(linkHref, visitedUrls, pageInfos, currentDepth + 1, maxDepth);
                     }
                 }
             }
@@ -93,29 +92,29 @@ public class Main {
         return url;
     }
 
-    // Metodo per ottenere il titolo della pagina data la sua URL
-    private static String getPageTitle(String url) {
-        try {
-            Document doc = Jsoup.connect(url).get();
-            return doc.title();
-        } catch (IOException e) {
-            return "Titolo non disponibile";
-        }
-    }
-
     // Metodo main per l'esecuzione del crawler
     public static void main(String[] args) {
+        Scanner scanner = new Scanner(System.in);
+
         // Richiesta dell'URL seed all'utente
-        String seedUrl = "wikipedia.org"; // Modifica con un URL valido o richiedi all'utente
+        System.out.print("Inserisci il seed URL: ");
+        String seedUrl = scanner.nextLine().trim();
         seedUrl = formatUrl(seedUrl);
 
+        System.out.print("Inserisci la profondità massima (es. 3): ");
+        int maxDepth = scanner.nextInt();
+
+        System.out.println("Inizio del crawling...\n");
+
         // Esegui il crawling e ottieni i risultati
-        List<PageInfo> results = crawl(seedUrl, 1);
+        List<PageInfo> results = crawl(seedUrl, maxDepth);
 
         // Stampa riepilogativa
         System.out.println("\nRiepilogo dei link trovati:");
         for (PageInfo pageInfo : results) {
             System.out.println(pageInfo);
         }
+
+        System.out.println("\nCrawling completato.");
     }
 }
