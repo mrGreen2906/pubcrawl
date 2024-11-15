@@ -14,20 +14,12 @@ public class Main {
 
     // Classe per memorizzare il titolo della pagina e il suo URL
     public static class PageInfo {
-        private String title;
-        private String url;
+        private final String title;
+        private final String url;
 
         public PageInfo(String title, String url) {
             this.title = title;
             this.url = url;
-        }
-
-        public String getTitle() {
-            return title;
-        }
-
-        public String getUrl() {
-            return url;
         }
 
         @Override
@@ -53,30 +45,24 @@ public class Main {
         visitedUrls.add(url); // Aggiunge l'URL al set dei visitati
 
         try {
-            Document doc = getDocument(url);
-            if (doc != null) {
-                // Aggiunge l'informazione della pagina alla lista e la stampa
-                PageInfo pageInfo = new PageInfo(doc.title(), url);
-                pageInfos.add(pageInfo);
-                System.out.println("Profondità " + currentDepth + ": " + pageInfo);
+            Document doc = Jsoup.connect(url).get(); // Scarica il contenuto della pagina
 
-                // Estrazione e ricorsione sui link
-                Elements links = doc.select("a[href]");
-                for (Element link : links) {
-                    String linkHref = link.absUrl("href");
-                    if (!visitedUrls.contains(linkHref) && isHttpOrHttps(linkHref)) {
-                        crawlRecursive(linkHref, visitedUrls, pageInfos, currentDepth + 1, maxDepth);
-                    }
+            // Aggiunge l'informazione della pagina alla lista e la stampa
+            PageInfo pageInfo = new PageInfo(doc.title(), url);
+            pageInfos.add(pageInfo);
+            System.out.println("Profondità " + currentDepth + ": " + pageInfo);
+
+            // Estrazione e ricorsione sui link
+            Elements links = doc.select("a[href]");
+            for (Element link : links) {
+                String linkHref = link.absUrl("href");
+                if (!visitedUrls.contains(linkHref) && isHttpOrHttps(linkHref)) {
+                    crawlRecursive(linkHref, visitedUrls, pageInfos, currentDepth + 1, maxDepth);
                 }
             }
         } catch (IOException e) {
             System.out.println("Errore durante l'accesso all'URL: " + url);
         }
-    }
-
-    // Metodo per ottenere un documento JSoup dato un URL
-    private static Document getDocument(String url) throws IOException {
-        return Jsoup.connect(url).get();
     }
 
     // Metodo per controllare se l'URL inizia con "http" o "https"
